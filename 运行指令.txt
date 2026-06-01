@@ -1,0 +1,118 @@
+# 驾驶员注视目标识别实验 — 运行命令
+
+所有命令在项目根目录下执行。
+
+---
+
+## 0. 环境验证
+
+```bash
+dir gazemodel\weights\unigaze_l16_joint.pth.tar
+dir gazemodel\face_model.txt
+dir calibration\camera_calib.json
+```
+
+---
+
+## 1. 视线-屏幕标定
+
+被试就坐后运行，程序启动 5x5 标定靶点界面。
+
+```bash
+python calibration\gaze_calib.py \
+    --screen-width 2194 --screen-height 1234 \
+    --grid-cols 5 --grid-rows 5 --camera-id 0 \
+    --camera-calib calibration\camera_calib.json \
+    --calibration-margin-ratio 0.10 \
+    --output-dir calib_runs\run_001
+```
+
+检查标定误差 (应 < 30px):
+
+```bash
+python -c "import json; d=json.load(open('calib_runs/run_001/calib.json','r',encoding='utf-8')); s=d['statistics']; print(f'Mean: {s[\"mean_error_px\"]:.2f}px  Median: {s[\"median_error_px\"]:.2f}px')"
+```
+
+---
+
+## 2. 数据采集
+
+运行 Mask2Former 全景分割采集程序。
+
+```bash
+python scene_understanding\mask2former_gaze_collection.py \
+    --images-dir <images_dir> \
+    --model-dir <model_dir> \
+    --output-dir gaze_dataset \
+    --target-mode all --camera-id 0 \
+    --copy-calib calib_runs\run_001\calib.json
+```
+
+---
+
+## 3. 主评估 (M1-M4)
+
+```bash
+python eval\evaluate.py \
+    --dataset-dir gaze_dataset \
+    --calib-path calib_runs\run_001\calib.json \
+    --output-dir eval_results\main \
+    --camera-calib-path calibration\camera_calib.json \
+    --tau 80 --lambda-min 0.2 --lambda-max 1.0 \
+    --save-predictions eval_results\gaze_predictions.json
+```
+
+---
+
+## 4. τ 敏感性分析 (可选)
+
+```bash
+python eval\evaluate.py --dataset-dir gaze_dataset --calib-path calib_runs\run_001\calib.json --output-dir eval_results\tau_40 --cached-predictions eval_results\gaze_predictions.json --tau 40 --lambda-min 0.2 --lambda-max 1.0
+python eval\evaluate.py --dataset-dir gaze_dataset --calib-path calib_runs\run_001\calib.json --output-dir eval_results\tau_60 --cached-predictions eval_results\gaze_predictions.json --tau 60 --lambda-min 0.2 --lambda-max 1.0
+python eval\evaluate.py --dataset-dir gaze_dataset --calib-path calib_runs\run_001\calib.json --output-dir eval_results\tau_120 --cached-predictions eval_results\gaze_predictions.json --tau 120 --lambda-min 0.2 --lambda-max 1.0
+python eval\evaluate.py --dataset-dir gaze_dataset --calib-path calib_runs\run_001\calib.json --output-dir eval_results\tau_160 --cached-predictions eval_results\gaze_predictions.json --tau 160 --lambda-min 0.2 --lambda-max 1.0
+```
+
+---
+
+## 5. λ 敏感性分析 (可选)
+
+```bash
+python eval\evaluate.py --dataset-dir gaze_dataset --calib-path calib_runs\run_001\calib.json --output-dir eval_results\lambda_C2 --cached-predictions eval_results\gaze_predictions.json --tau 80 --lambda-min 0.0 --lambda-max 1.0
+python eval\evaluate.py --dataset-dir gaze_dataset --calib-path calib_runs\run_001\calib.json --output-dir eval_results\lambda_C3 --cached-predictions eval_results\gaze_predictions.json --tau 80 --lambda-min 0.4 --lambda-max 1.0
+python eval\evaluate.py --dataset-dir gaze_dataset --calib-path calib_runs\run_001\calib.json --output-dir eval_results\lambda_C4 --cached-predictions eval_results\gaze_predictions.json --tau 80 --lambda-min 0.2 --lambda-max 0.8
+python eval\evaluate.py --dataset-dir gaze_dataset --calib-path calib_runs\run_001\calib.json --output-dir eval_results\lambda_C5 --cached-predictions eval_results\gaze_predictions.json --tau 80 --lambda-min 0.2 --lambda-max 1.2
+```
+
+---
+
+## 6. 可视化
+
+```bash
+python eval\visualize.py \
+    --results-csv eval_results\main\results_per_sample.csv \
+    --dataset-dir gaze_dataset \
+    --output-dir eval_results\visualizations \
+    --mode interesting --max-samples 500
+```
+
+---
+
+## LBW 外部验证 (可选)
+
+```bash
+python lbw_validation\validate_on_lbw.py \
+    --lbw-root lbw_dataset \
+    --project-root . \
+    --calib-path calib_runs\run_001\calib.json \
+    --output-dir lbw_results
+```
+
+---
+
+## 注意事项
+
+1. 模型权重 `unigaze_l16_joint.pth.tar` 和 `face_model.txt` 需自行下载放入 `gazemodel/`
+2. mmdet/mmseg 通过 pip 安装: `pip install mmdet mmseg mmengine`
+3. 步骤1与步骤2需被试参与，务必保证坐姿一致
+4. 步骤4-5的敏感性分析依赖步骤3的 `gaze_predictions.json` 缓存

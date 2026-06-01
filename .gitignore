@@ -1,0 +1,54 @@
+# ===== Python =====
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# ===== Model Weights =====
+*.pth
+*.pth.tar
+*.safetensors
+*.pkl
+*.onnx
+*.ckpt
+
+# ===== Datasets (large, not for GitHub) =====
+gaze_dataset*/
+gaze_dataset_mouse/
+lbw_dataset/
+lbw_results/
+eval_results/
+calib_runs/
+
+# ===== IDE / Editor =====
+.idea/
+.vscode/
+.claude/
+*.swp
+*.swo
+*~
+
+# ===== OS junk =====
+.DS_Store
+Thumbs.db
+
+# ===== Vendored frameworks (use pip instead) =====
+mmdetection/
+mmsegmentation/
+
+# ===== Generated output =====
+target_inference_with_vis/
+
+# ===== Temp / Backup =====
+*.bak
+*.tmp
+*.log
+unigaze_backup_before_mmdet.txt
+
+# ===== Build artifacts =====
+*.whl
+
+# ===== Jupyter =====
+.ipynb_checkpoints/

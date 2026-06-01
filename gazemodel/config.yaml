@@ -1,0 +1,7 @@
+net_config:
+  type: gazemodel.models.mae_gaze.MAE_Gaze
+  params:
+    model_type: 'vit_l_16'
+    global_pool: False
+    drop_path_rate: 0.1
+    custom_pretrained_path: gazemodel/weights/unigaze_l16_joint.pth.tar
